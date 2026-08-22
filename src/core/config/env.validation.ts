@@ -33,10 +33,33 @@ const baseEnvSchema = z.object({
 
   COOKIDOO_COOKIE_FILE: z.string().trim().min(1).optional(),
 
+  MCP_LOGIN_SECRET: z.string().trim().min(1).optional(),
+  MCP_PUBLIC_URL: z
+    .string()
+    .trim()
+    .url()
+    .refine((u) => u.startsWith('https://'), 'MCP_PUBLIC_URL must use https')
+    .optional(),
+  MCP_DATA_DIR: z.string().trim().min(1).optional(),
+  MCP_TRUST_PROXY: z.enum(['true', 'false']).optional(),
+
   OTEL_EXPORTER_OTLP_ENDPOINT: z.string().trim().url().optional(),
   OTEL_SERVICE_NAME: z.string().optional(),
   OTEL_TRACES_SAMPLE_RATIO: z.coerce.number().min(0).max(1).optional(),
   OTEL_METRIC_EXPORT_INTERVAL_MILLIS: z.coerce.number().positive().optional(),
+}).superRefine((cfg, ctx) => {
+  // Auth wird nur aktiv, wenn Passphrase UND Public-URL gesetzt sind. Genau
+  // eines von beiden ist ein Konfigurationsfehler (halber Türsteher).
+  const hasSecret = !!cfg.MCP_LOGIN_SECRET;
+  const hasUrl = !!cfg.MCP_PUBLIC_URL;
+  if (hasSecret !== hasUrl) {
+    ctx.addIssue({
+      code: 'custom',
+      path: [hasSecret ? 'MCP_PUBLIC_URL' : 'MCP_LOGIN_SECRET'],
+      message:
+        'MCP_LOGIN_SECRET and MCP_PUBLIC_URL must be set together to enable auth',
+    });
+  }
 });
 
 export function validateEnv(

@@ -68,3 +68,40 @@ describe('validateEnv', () => {
     );
   });
 });
+
+describe('auth env refinement', () => {
+  const base = {
+    COOKIDOO_EMAIL: 'a@b.de',
+    COOKIDOO_PASSWORD: 'x',
+  };
+
+  it('accepts config with neither auth var set (auth disabled)', () => {
+    expect(() => validateEnv({ ...base })).not.toThrow();
+  });
+
+  it('accepts config with both auth vars set', () => {
+    expect(() =>
+      validateEnv({
+        ...base,
+        MCP_LOGIN_SECRET: 'supersecret',
+        MCP_PUBLIC_URL: 'https://cookidoo-mcp.example.com',
+      }),
+    ).not.toThrow();
+  });
+
+  it('rejects config with only MCP_PUBLIC_URL set', () => {
+    expect(() =>
+      validateEnv({ ...base, MCP_PUBLIC_URL: 'https://x.example.com' }),
+    ).toThrow(/MCP_LOGIN_SECRET/);
+  });
+
+  it('rejects a non-https MCP_PUBLIC_URL', () => {
+    expect(() =>
+      validateEnv({
+        ...base,
+        MCP_LOGIN_SECRET: 's',
+        MCP_PUBLIC_URL: 'http://insecure.example.com',
+      }),
+    ).toThrow(/https/);
+  });
+});
