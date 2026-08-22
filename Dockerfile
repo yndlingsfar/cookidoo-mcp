@@ -45,6 +45,11 @@ COPY --from=builder --chown=node:node /app/dist ./dist
 # runs here); dropping it removes its bundled vulnerable `tar` dependency.
 RUN rm -rf /usr/local/lib/node_modules/npm /usr/local/bin/npm /usr/local/bin/npx
 
+# @sisques-labs/nestjs-kit erzeugt beim Import eine winston-DailyRotateFile nach
+# ./logs (unbedingt, nicht abschaltbar) — als non-root `node` sonst EACCES.
+# Verzeichnis anlegen und dem node-User geben, damit der Import nicht crasht.
+RUN mkdir -p /app/logs && chown node:node /app/logs
+
 USER node
 EXPOSE 3000
 
