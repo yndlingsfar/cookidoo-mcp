@@ -13,8 +13,8 @@ function formatZodIssues(issues: z.ZodIssue[]): string {
  * Schema for the process environment.
  *
  * Cookidoo credentials are mandatory — the server logs in as a single account
- * configured here. Localization is optional and defaults to `de-CH` / Swiss
- * Cookidoo, mirroring the upstream library defaults.
+ * configured here. Localization is optional and defaults to `de-DE` / German
+ * Cookidoo.
  */
 const baseEnvSchema = z
   .object({
