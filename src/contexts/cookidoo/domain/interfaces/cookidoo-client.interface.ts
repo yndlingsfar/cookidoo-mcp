@@ -18,6 +18,7 @@ import {
   CookidooCollection,
   CookidooCollectionPage,
 } from '../types/cookidoo-collection.type';
+import { CookidooWatchlistItem } from '../types/cookidoo-watchlist.type';
 
 /** Ownership change for a shopping-list item ("bought" / "not bought"). */
 export interface CookidooOwnershipChange {
@@ -190,4 +191,13 @@ export interface ICookidooClient {
     collectionId: string,
     recipeId: string,
   ): Promise<CookidooCollection>;
+
+  /** All recipes on the watchlist ("Merkliste"), across all pages. */
+  getWatchlist(): Promise<CookidooWatchlistItem[]>;
+
+  /** Add the given recipes to the watchlist ("Merkliste"). */
+  addRecipesToWatchlist(recipeIds: string[]): Promise<void>;
+
+  /** Remove the given recipes from the watchlist ("Merkliste"). */
+  removeRecipesFromWatchlist(recipeIds: string[]): Promise<void>;
 }

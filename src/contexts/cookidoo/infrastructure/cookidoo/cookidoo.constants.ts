@@ -58,6 +58,14 @@ export const ADD_MANAGED_COLLECTION_PATH =
 export const REMOVE_MANAGED_COLLECTION_PATH =
   'organize/{language}/api/managed-list/{id}';
 
+/**
+ * Watchlist ("Merkliste"): the quick-save bookmark list under "Meine Rezepte",
+ * distinct from collections. Same path for GET (paginated list), PUT (add) and
+ * DELETE (remove); add/remove carry a `{ recipeId }` body. Not part of the
+ * upstream `cookidoo-api`; endpoint verified against the live web surface.
+ */
+export const WATCHLIST_PATH = 'organize/{language}/api/bookmark';
+
 export const CUSTOM_COLLECTIONS_PATH = 'organize/{language}/api/custom-list';
 export const ADD_CUSTOM_COLLECTION_PATH = 'organize/{language}/api/custom-list';
 export const REMOVE_CUSTOM_COLLECTION_PATH =

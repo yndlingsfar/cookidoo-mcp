@@ -12,6 +12,7 @@ import {
   shoppingRecipeFromJson,
   subscriptionFromJson,
   userInfoFromJson,
+  watchlistItemFromJson,
 } from './cookidoo.mappers';
 
 const localization: CookidooLocalization = {
@@ -372,6 +373,46 @@ describe('cookidoo mappers', () => {
 
       expect(result.description).toBeNull();
       expect(result.chapters).toEqual([]);
+    });
+  });
+
+  describe('watchlistItemFromJson', () => {
+    it('maps a bookmark to a watchlist item', () => {
+      const result = watchlistItemFromJson({
+        id: 'FAV-1',
+        recipe: {
+          id: 'r1',
+          asciiTitle: 'Pasta',
+          landscapeImage: 'http://img/l.jpg',
+          prepTime: '900.0',
+          locale: 'de-DE',
+        },
+      });
+
+      expect(result).toEqual({
+        bookmarkId: 'FAV-1',
+        recipeId: 'r1',
+        name: 'Pasta',
+        totalTime: 900,
+        image: 'http://img/l.jpg',
+        locale: 'de-DE',
+      });
+    });
+
+    it('defaults missing recipe fields to null', () => {
+      const result = watchlistItemFromJson({
+        id: 'FAV-2',
+        recipe: { id: 'r2' },
+      });
+
+      expect(result).toEqual({
+        bookmarkId: 'FAV-2',
+        recipeId: 'r2',
+        name: null,
+        totalTime: null,
+        image: null,
+        locale: null,
+      });
     });
   });
 });

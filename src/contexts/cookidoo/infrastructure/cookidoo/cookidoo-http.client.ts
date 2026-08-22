@@ -28,6 +28,7 @@ import {
   CookidooCollection,
   CookidooCollectionPage,
 } from '../../domain/types/cookidoo-collection.type';
+import { CookidooWatchlistItem } from '../../domain/types/cookidoo-watchlist.type';
 import {
   CookidooAdditionalItemEdit,
   CookidooOwnershipChange,
@@ -49,6 +50,7 @@ import {
   shoppingRecipeFromJson,
   subscriptionFromJson,
   userInfoFromJson,
+  watchlistItemFromJson,
 } from './cookidoo.mappers';
 import {
   ADD_ADDITIONAL_ITEMS_PATH,
@@ -84,6 +86,7 @@ import {
   REQUIRED_AUTH_COOKIES,
   SHOPPING_LIST_RECIPES_PATH,
   SUBSCRIPTIONS_PATH,
+  WATCHLIST_PATH,
 } from './cookidoo.constants';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -1207,6 +1210,57 @@ export class CookidooHttpClient implements ICookidooClient {
     return collectionFromJson(
       this.ensureObject(data.content, 'remove recipe from custom collection'),
     );
+  }
+
+  async getWatchlist(): Promise<CookidooWatchlistItem[]> {
+    const items: CookidooWatchlistItem[] = [];
+    let page = 0;
+    let totalPages = 1;
+    // Safety cap against a misbehaving pagination block (avoid an endless loop).
+    const MAX_PAGES = 100;
+    do {
+      const result = await this.request<unknown>(
+        'get',
+        this.buildUrl(WATCHLIST_PATH),
+        'loading watchlist',
+        { params: { page: String(page) } },
+      );
+      if (result === null) {
+        break;
+      }
+      const data = this.ensureObject(result, 'loading watchlist');
+      const bookmarks: any[] = data.bookmarks ?? [];
+      for (const bookmark of bookmarks) {
+        if (bookmark?.recipe?.id) {
+          items.push(watchlistItemFromJson(bookmark));
+        }
+      }
+      totalPages = Number(data.page?.totalPages ?? 1);
+      page += 1;
+    } while (page < totalPages && page < MAX_PAGES);
+    return items;
+  }
+
+  async addRecipesToWatchlist(recipeIds: string[]): Promise<void> {
+    for (const recipeId of recipeIds) {
+      await this.request<void>(
+        'put',
+        this.buildUrl(WATCHLIST_PATH),
+        'add recipe to watchlist',
+        { data: { recipeId }, parseResponse: false },
+      );
+    }
+  }
+
+  async removeRecipesFromWatchlist(recipeIds: string[]): Promise<void> {
+    for (const recipeId of recipeIds) {
+      await this.request<void>(
+        'delete',
+        this.buildUrl(WATCHLIST_PATH),
+        'remove recipe from watchlist',
+        { data: { recipeId }, parseResponse: false },
+      );
+    }
   }
 
   /** Current epoch time in seconds, used for the `ownedTimestamp` fields. */

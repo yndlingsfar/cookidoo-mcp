@@ -19,6 +19,7 @@ import { ManagedCollectionCountQueryHandler } from './application/queries/manage
 import { ManagedCollectionFindAllQueryHandler } from './application/queries/managed-collection-find-all/managed-collection-find-all.handler';
 import { CustomCollectionCountQueryHandler } from './application/queries/custom-collection-count/custom-collection-count.handler';
 import { CustomCollectionFindAllQueryHandler } from './application/queries/custom-collection-find-all/custom-collection-find-all.handler';
+import { WatchlistFindAllQueryHandler } from './application/queries/watchlist-find-all/watchlist-find-all.handler';
 
 // Command handlers
 import { ShoppingListAddRecipeIngredientsCommandHandler } from './application/commands/shopping-list-add-recipe-ingredients/shopping-list-add-recipe-ingredients.handler';
@@ -43,6 +44,8 @@ import { CustomCollectionAddCommandHandler } from './application/commands/custom
 import { CustomCollectionRemoveCommandHandler } from './application/commands/custom-collection-remove/custom-collection-remove.handler';
 import { CustomCollectionAddRecipesCommandHandler } from './application/commands/custom-collection-add-recipes/custom-collection-add-recipes.handler';
 import { CustomCollectionRemoveRecipeCommandHandler } from './application/commands/custom-collection-remove-recipe/custom-collection-remove-recipe.handler';
+import { WatchlistAddCommandHandler } from './application/commands/watchlist-add/watchlist-add.handler';
+import { WatchlistRemoveCommandHandler } from './application/commands/watchlist-remove/watchlist-remove.handler';
 
 // MCP tools
 import { AccountGetUserInfoMcpTool } from './transport/mcp/tools/account-get-user-info.tool';
@@ -81,6 +84,9 @@ import { CustomCollectionAddMcpTool } from './transport/mcp/tools/custom-collect
 import { CustomCollectionRemoveMcpTool } from './transport/mcp/tools/custom-collection-remove.tool';
 import { CustomCollectionAddRecipesMcpTool } from './transport/mcp/tools/custom-collection-add-recipes.tool';
 import { CustomCollectionRemoveRecipeMcpTool } from './transport/mcp/tools/custom-collection-remove-recipe.tool';
+import { WatchlistListMcpTool } from './transport/mcp/tools/watchlist-list.tool';
+import { WatchlistAddMcpTool } from './transport/mcp/tools/watchlist-add.tool';
+import { WatchlistRemoveMcpTool } from './transport/mcp/tools/watchlist-remove.tool';
 
 const QUERY_HANDLERS = [
   AccountFindUserInfoQueryHandler,
@@ -97,6 +103,7 @@ const QUERY_HANDLERS = [
   ManagedCollectionFindAllQueryHandler,
   CustomCollectionCountQueryHandler,
   CustomCollectionFindAllQueryHandler,
+  WatchlistFindAllQueryHandler,
 ];
 
 const COMMAND_HANDLERS = [
@@ -122,6 +129,8 @@ const COMMAND_HANDLERS = [
   CustomCollectionRemoveCommandHandler,
   CustomCollectionAddRecipesCommandHandler,
   CustomCollectionRemoveRecipeCommandHandler,
+  WatchlistAddCommandHandler,
+  WatchlistRemoveCommandHandler,
 ];
 
 const INFRASTRUCTURE = [
@@ -165,6 +174,9 @@ const MCP_TOOLS = [
   CustomCollectionRemoveMcpTool,
   CustomCollectionAddRecipesMcpTool,
   CustomCollectionRemoveRecipeMcpTool,
+  WatchlistListMcpTool,
+  WatchlistAddMcpTool,
+  WatchlistRemoveMcpTool,
 ];
 
 @Module({

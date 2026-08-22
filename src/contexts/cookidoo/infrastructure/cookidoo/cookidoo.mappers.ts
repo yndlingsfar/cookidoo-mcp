@@ -23,6 +23,7 @@ import {
   CookidooChapter,
   CookidooCollection,
 } from '../../domain/types/cookidoo-collection.type';
+import { CookidooWatchlistItem } from '../../domain/types/cookidoo-watchlist.type';
 import {
   IMAGE_TRANSFORMATION,
   THUMBNAIL_TRANSFORMATION,
@@ -327,6 +328,20 @@ export function collectionFromJson(collection: Json): CookidooCollection {
         totalTime: Math.trunc(Number(recipe.totalTime ?? 0)),
       })),
     })),
+  };
+}
+
+export function watchlistItemFromJson(bookmark: Json): CookidooWatchlistItem {
+  const recipe: Json = bookmark.recipe ?? {};
+  const prep = recipe.prepTime;
+  return {
+    bookmarkId: bookmark.id ?? '',
+    recipeId: recipe.id ?? '',
+    name: recipe.asciiTitle ?? null,
+    totalTime:
+      prep === undefined || prep === null ? null : Math.trunc(Number(prep)),
+    image: recipe.landscapeImage ?? null,
+    locale: recipe.locale ?? null,
   };
 }
 
