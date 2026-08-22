@@ -132,6 +132,60 @@ The MCP endpoint is then available at `http://localhost:3000/api/mcp` (or your
 custom port). A liveness probe is exposed at `GET /api/health` (handy for
 Docker/orchestrator health checks).
 
+## Betrieb mit Auth (claude.ai Connector)
+
+> ⚠️ **Ohne Auth ist `POST /api/mcp` offen** — wer die URL kennt, steuert deinen
+> Cookidoo-Account. Für den öffentlichen Betrieb (z.B. als Custom Connector auf
+> claude.ai hinter einem Cloudflare-Tunnel) **immer** den Türsteher aktivieren.
+
+Der Türsteher ist ein vollwertiger OAuth-2.0-Server (Dynamic Client
+Registration + PKCE) mit einer Passphrase-Login-Seite. Er wird **nur aktiv**,
+wenn `MCP_LOGIN_SECRET` **und** `MCP_PUBLIC_URL` gesetzt sind — sonst startet der
+Server unverändert ohne Auth (lokal/Tailnet).
+
+### 1. `.env` befüllen
+
+```bash
+cp .env.example .env
+# Passphrase erzeugen und eintragen:
+openssl rand -base64 32          # -> MCP_LOGIN_SECRET
+# MCP_PUBLIC_URL = öffentlicher Tunnel-Hostname, z.B.:
+#   MCP_PUBLIC_URL=https://cookidoo-mcp.deine-domain.tld
+# COOKIDOO_EMAIL / COOKIDOO_PASSWORD = dein Cookidoo-Konto
+```
+
+Die `.env` liegt **nur auf dem Server**, steht in `.gitignore` und darf niemals
+committet werden.
+
+### 2. Starten (Docker Compose)
+
+```bash
+mkdir -p ~/cookidoo-mcp-data          # Volume für auth_store.json + Session
+docker compose up -d --build
+```
+
+Der Container hängt im externen Netz `proxy` und veröffentlicht **keinen**
+Host-Port — er ist nur über den Tunnel erreichbar.
+
+### 3. Cloudflare-Tunnel
+
+Im **bestehenden** Tunnel (Zero Trust → Networks → Tunnels → dein Tunnel →
+Public Hostname) einen Eintrag hinzufügen:
+
+- **Subdomain/Hostname:** `cookidoo-mcp.deine-domain.tld`
+- **Service:** `http://cookidoo-mcp:3000`
+
+Ein zweiter cloudflared-Container ist nicht nötig — ein Tunnel bedient mehrere
+Hostnames.
+
+### 4. In claude.ai einbinden
+
+Settings → Connectors → Custom Connector → URL:
+`https://cookidoo-mcp.deine-domain.tld/api/mcp`. Beim Verbinden öffnet sich die
+Passphrase-Login-Seite; nach Eingabe von `MCP_LOGIN_SECRET` ist der Connector
+verbunden. `GET /api/health` und die OAuth-/Discovery-Endpunkte bleiben
+unauthentifiziert; nur `POST /api/mcp` verlangt ein gültiges Bearer-Token.
+
 ## Cursor
 
 Cookidoo credentials live in the server `.env` — Cursor only needs the HTTP

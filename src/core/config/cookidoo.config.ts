@@ -9,12 +9,12 @@ function requireEnv(name: string): string {
 }
 
 /**
- * Default localization: Spanish Cookidoo (Spain).
+ * Default localization: German Cookidoo (Germany).
  * Override any field via environment variables.
  */
-const DEFAULT_COUNTRY_CODE = 'es';
-const DEFAULT_LANGUAGE = 'es-ES';
-const DEFAULT_URL = 'https://cookidoo.es/foundation/es-ES';
+const DEFAULT_COUNTRY_CODE = 'de';
+const DEFAULT_LANGUAGE = 'de-DE';
+const DEFAULT_URL = 'https://cookidoo.de/foundation/de-DE';
 
 export interface CookidooLocalization {
   readonly countryCode: string;
@@ -40,17 +40,14 @@ export interface CookidooConfig {
  *
  * Credentials are required; localization falls back to the upstream defaults.
  */
-export const cookidooConfig = registerAs(
-  'cookidoo',
-  (): CookidooConfig => ({
-    email: requireEnv('COOKIDOO_EMAIL'),
-    password: requireEnv('COOKIDOO_PASSWORD'),
-    localization: {
-      countryCode:
-        process.env.COOKIDOO_COUNTRY_CODE?.trim() ?? DEFAULT_COUNTRY_CODE,
-      language: process.env.COOKIDOO_LANGUAGE?.trim() ?? DEFAULT_LANGUAGE,
-      url: process.env.COOKIDOO_URL?.trim() ?? DEFAULT_URL,
-    },
-    cookieFile: process.env.COOKIDOO_COOKIE_FILE?.trim() || undefined,
-  }),
-);
+export const cookidooConfig = registerAs('cookidoo', (): CookidooConfig => ({
+  email: requireEnv('COOKIDOO_EMAIL'),
+  password: requireEnv('COOKIDOO_PASSWORD'),
+  localization: {
+    countryCode:
+      process.env.COOKIDOO_COUNTRY_CODE?.trim() ?? DEFAULT_COUNTRY_CODE,
+    language: process.env.COOKIDOO_LANGUAGE?.trim() ?? DEFAULT_LANGUAGE,
+    url: process.env.COOKIDOO_URL?.trim() ?? DEFAULT_URL,
+  },
+  cookieFile: process.env.COOKIDOO_COOKIE_FILE?.trim() || undefined,
+}));

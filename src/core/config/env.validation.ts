@@ -13,31 +13,56 @@ function formatZodIssues(issues: z.ZodIssue[]): string {
  * Schema for the process environment.
  *
  * Cookidoo credentials are mandatory — the server logs in as a single account
- * configured here. Localization is optional and defaults to `de-CH` / Swiss
- * Cookidoo, mirroring the upstream library defaults.
+ * configured here. Localization is optional and defaults to `de-DE` / German
+ * Cookidoo.
  */
-const baseEnvSchema = z.object({
-  NODE_ENV: z.string().optional(),
-  PORT: z.coerce.number().int().positive().optional(),
+const baseEnvSchema = z
+  .object({
+    NODE_ENV: z.string().optional(),
+    PORT: z.coerce.number().int().positive().optional(),
 
-  COOKIDOO_EMAIL: z
-    .string()
-    .trim()
-    .min(1, 'COOKIDOO_EMAIL must not be empty')
-    .email('COOKIDOO_EMAIL must be a valid email'),
-  COOKIDOO_PASSWORD: z.string().min(1, 'COOKIDOO_PASSWORD must not be empty'),
+    COOKIDOO_EMAIL: z
+      .string()
+      .trim()
+      .min(1, 'COOKIDOO_EMAIL must not be empty')
+      .email('COOKIDOO_EMAIL must be a valid email'),
+    COOKIDOO_PASSWORD: z.string().min(1, 'COOKIDOO_PASSWORD must not be empty'),
 
-  COOKIDOO_COUNTRY_CODE: z.string().trim().min(1).optional(),
-  COOKIDOO_LANGUAGE: z.string().trim().min(1).optional(),
-  COOKIDOO_URL: z.string().trim().url().optional(),
+    COOKIDOO_COUNTRY_CODE: z.string().trim().min(1).optional(),
+    COOKIDOO_LANGUAGE: z.string().trim().min(1).optional(),
+    COOKIDOO_URL: z.string().trim().url().optional(),
 
-  COOKIDOO_COOKIE_FILE: z.string().trim().min(1).optional(),
+    COOKIDOO_COOKIE_FILE: z.string().trim().min(1).optional(),
 
-  OTEL_EXPORTER_OTLP_ENDPOINT: z.string().trim().url().optional(),
-  OTEL_SERVICE_NAME: z.string().optional(),
-  OTEL_TRACES_SAMPLE_RATIO: z.coerce.number().min(0).max(1).optional(),
-  OTEL_METRIC_EXPORT_INTERVAL_MILLIS: z.coerce.number().positive().optional(),
-});
+    MCP_LOGIN_SECRET: z.string().trim().min(1).optional(),
+    MCP_PUBLIC_URL: z
+      .string()
+      .trim()
+      .url()
+      .refine((u) => u.startsWith('https://'), 'MCP_PUBLIC_URL must use https')
+      .optional(),
+    MCP_DATA_DIR: z.string().trim().min(1).optional(),
+    MCP_TRUST_PROXY: z.enum(['true', 'false']).optional(),
+
+    OTEL_EXPORTER_OTLP_ENDPOINT: z.string().trim().url().optional(),
+    OTEL_SERVICE_NAME: z.string().optional(),
+    OTEL_TRACES_SAMPLE_RATIO: z.coerce.number().min(0).max(1).optional(),
+    OTEL_METRIC_EXPORT_INTERVAL_MILLIS: z.coerce.number().positive().optional(),
+  })
+  .superRefine((cfg, ctx) => {
+    // Auth wird nur aktiv, wenn Passphrase UND Public-URL gesetzt sind. Genau
+    // eines von beiden ist ein Konfigurationsfehler (halber Türsteher).
+    const hasSecret = !!cfg.MCP_LOGIN_SECRET;
+    const hasUrl = !!cfg.MCP_PUBLIC_URL;
+    if (hasSecret !== hasUrl) {
+      ctx.addIssue({
+        code: 'custom',
+        path: [hasSecret ? 'MCP_PUBLIC_URL' : 'MCP_LOGIN_SECRET'],
+        message:
+          'MCP_LOGIN_SECRET and MCP_PUBLIC_URL must be set together to enable auth',
+      });
+    }
+  });
 
 export function validateEnv(
   config: Record<string, unknown>,

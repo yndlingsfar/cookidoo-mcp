@@ -1,0 +1,29 @@
+# Startet den Cookidoo-MCP hinter dem bestehenden Cloudflare-Tunnel.
+# Bau: aus dem Dockerfile hier. Start: `docker compose up -d --build`.
+services:
+  cookidoo-mcp:
+    build: .
+    image: cookidoo-mcp:latest
+    container_name: cookidoo-mcp
+    env_file: .env
+    volumes:
+      # auth_store.json + optionale .cookidoo-session.json überleben die Kiste.
+      # Verzeichnis mounten, nie die Datei (atomarer rename!).
+      - ~/cookidoo-mcp-data:/data
+    restart: unless-stopped
+    networks:
+      - proxy
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://localhost:3000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+# Bestehendes externes Netz (Traefik/cloudflared hängen dran) — nur beitreten.
+networks:
+  proxy:
+    external: true
