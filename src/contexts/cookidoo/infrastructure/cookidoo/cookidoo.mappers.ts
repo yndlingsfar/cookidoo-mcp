@@ -319,16 +319,14 @@ export function collectionFromJson(collection: Json): CookidooCollection {
     id: collection.id,
     name: collection.title,
     description: collection.description ?? null,
-    chapters: chapters.map(
-      (chapter): CookidooChapter => ({
-        name: chapter.title,
-        recipes: (chapter.recipes ?? []).map((recipe: Json) => ({
-          id: recipe.id,
-          name: recipe.title,
-          totalTime: Math.trunc(Number(recipe.totalTime ?? 0)),
-        })),
-      }),
-    ),
+    chapters: chapters.map((chapter): CookidooChapter => ({
+      name: chapter.title,
+      recipes: (chapter.recipes ?? []).map((recipe: Json) => ({
+        id: recipe.id,
+        name: recipe.title,
+        totalTime: Math.trunc(Number(recipe.totalTime ?? 0)),
+      })),
+    })),
   };
 }
 

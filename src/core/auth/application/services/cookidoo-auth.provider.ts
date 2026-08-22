@@ -157,7 +157,9 @@ export class CookidooAuthProvider implements OAuthServerProvider {
     this.store.codes[code] = {
       code,
       clientId: login.clientId,
-      scopes: login.params.scopes?.length ? login.params.scopes : DEFAULT_SCOPES,
+      scopes: login.params.scopes?.length
+        ? login.params.scopes
+        : DEFAULT_SCOPES,
       expiresAt: nowS() + CODE_TTL_S,
       codeChallenge: login.params.codeChallenge,
       redirectUri: login.params.redirectUri,

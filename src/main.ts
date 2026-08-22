@@ -5,6 +5,7 @@ import { Logger, ValidationPipe } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 
 import { AppModule } from './app.module';
+import { configureAuth } from '@core/auth/auth.wiring';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, { bufferLogs: true });
@@ -21,6 +22,9 @@ async function bootstrap() {
       transformOptions: { enableImplicitConversion: true },
     }),
   );
+
+  // OAuth-Türsteher mounten (no-op, wenn MCP_LOGIN_SECRET/MCP_PUBLIC_URL fehlen).
+  configureAuth(app);
 
   const port = process.env.PORT ?? 3000;
   await app.listen(port);

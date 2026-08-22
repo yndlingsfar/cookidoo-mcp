@@ -78,7 +78,8 @@ export class LoginService {
       const count = this.rateLimiter.recordFailure(input.ip);
       this.logger.warn(`Wrong passphrase (${count}) from IP ${input.ip}`);
       await sleep(LOGIN_DELAY_MS);
-      if (this.rateLimiter.isBlocked(input.ip)) this.sessions.consume(input.txn);
+      if (this.rateLimiter.isBlocked(input.ip))
+        this.sessions.consume(input.txn);
       return { status: 403, html: 'Falsche Passphrase.' };
     }
 

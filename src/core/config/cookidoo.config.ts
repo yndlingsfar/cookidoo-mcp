@@ -40,17 +40,14 @@ export interface CookidooConfig {
  *
  * Credentials are required; localization falls back to the upstream defaults.
  */
-export const cookidooConfig = registerAs(
-  'cookidoo',
-  (): CookidooConfig => ({
-    email: requireEnv('COOKIDOO_EMAIL'),
-    password: requireEnv('COOKIDOO_PASSWORD'),
-    localization: {
-      countryCode:
-        process.env.COOKIDOO_COUNTRY_CODE?.trim() ?? DEFAULT_COUNTRY_CODE,
-      language: process.env.COOKIDOO_LANGUAGE?.trim() ?? DEFAULT_LANGUAGE,
-      url: process.env.COOKIDOO_URL?.trim() ?? DEFAULT_URL,
-    },
-    cookieFile: process.env.COOKIDOO_COOKIE_FILE?.trim() || undefined,
-  }),
-);
+export const cookidooConfig = registerAs('cookidoo', (): CookidooConfig => ({
+  email: requireEnv('COOKIDOO_EMAIL'),
+  password: requireEnv('COOKIDOO_PASSWORD'),
+  localization: {
+    countryCode:
+      process.env.COOKIDOO_COUNTRY_CODE?.trim() ?? DEFAULT_COUNTRY_CODE,
+    language: process.env.COOKIDOO_LANGUAGE?.trim() ?? DEFAULT_LANGUAGE,
+    url: process.env.COOKIDOO_URL?.trim() ?? DEFAULT_URL,
+  },
+  cookieFile: process.env.COOKIDOO_COOKIE_FILE?.trim() || undefined,
+}));
