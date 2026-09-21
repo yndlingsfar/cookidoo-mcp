@@ -30,3 +30,5 @@ pnpm-debug.log*
 # cookidoo session cookies (never commit a real session)
 cookies.json
 .cookidoo-session.json
+# Isolated worktrees for feature work
+.worktrees/
