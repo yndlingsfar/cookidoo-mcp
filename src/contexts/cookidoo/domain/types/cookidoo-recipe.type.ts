@@ -33,6 +33,24 @@ export interface CookidooSearchResult {
   readonly total: number;
 }
 
+/** A single nutrition figure as reported by Cookidoo, with its raw type name. */
+export interface CookidooNutritionValue {
+  readonly type: string;
+  readonly number: number;
+  readonly unit: string;
+}
+
+/**
+ * Nutrition figures for a recipe, together with the basis they refer to.
+ * The basis is preserved verbatim: it may be `1 Portion`, `100 g`, or another
+ * unit, and must never be assumed to be per portion.
+ */
+export interface CookidooNutrition {
+  readonly basisQuantity: number;
+  readonly basisUnit: string;
+  readonly values: CookidooNutritionValue[];
+}
+
 /** Detailed view of a single recipe (core subset of the upstream payload). */
 export interface CookidooRecipeDetails {
   readonly id: string;
@@ -41,6 +59,7 @@ export interface CookidooRecipeDetails {
   readonly difficulty: string | null;
   readonly notes: string[];
   readonly utensils: string[];
+  readonly nutrition: CookidooNutrition | null;
   readonly servingSize: number;
   readonly activeTime: number | null;
   readonly totalTime: number | null;

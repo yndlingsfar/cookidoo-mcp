@@ -5,6 +5,8 @@ import {
 } from '../../domain/types/cookidoo-account.type';
 import {
   CookidooIngredient,
+  CookidooNutrition,
+  CookidooNutritionValue,
   CookidooRecipeDetails,
   CookidooSearchRecipeHit,
   CookidooSearchResult,
@@ -166,6 +168,54 @@ function findTime(times: Json[] | undefined, type: string): number | null {
   return null;
 }
 
+/**
+ * Read the nutrition figures from a recipe payload.
+ *
+ * Cookidoo reports figures against a basis (`1 Portion`, `100 g`, …) that is
+ * carried through unchanged: assuming portions here would silently scale every
+ * downstream calculation. Returns null when no usable figures are present,
+ * which is not the same as zero.
+ */
+function nutritionFromJson(groups: unknown): CookidooNutrition | null {
+  if (!Array.isArray(groups)) {
+    return null;
+  }
+  for (const group of groups as Json[]) {
+    const entries: Json[] = group?.recipeNutritions ?? [];
+    if (!Array.isArray(entries)) {
+      continue;
+    }
+    for (const entry of entries) {
+      const raw: Json[] = Array.isArray(entry?.nutritions)
+        ? entry.nutritions
+        : [];
+      const values: CookidooNutritionValue[] = raw
+        .filter(
+          (value) =>
+            typeof value?.type === 'string' &&
+            value?.number !== undefined &&
+            value?.number !== null &&
+            !Number.isNaN(Number(value.number)),
+        )
+        .map((value) => ({
+          type: value.type,
+          number: Number(value.number),
+          unit: typeof value.unittype === 'string' ? value.unittype : '',
+        }));
+      if (values.length === 0) {
+        continue;
+      }
+      return {
+        basisQuantity: Number(entry?.quantity ?? 1),
+        basisUnit:
+          typeof entry?.unitNotation === 'string' ? entry.unitNotation : '',
+        values,
+      };
+    }
+  }
+  return null;
+}
+
 export function recipeDetailsFromJson(
   recipe: Json,
   localization: CookidooLocalization,
@@ -191,6 +241,7 @@ export function recipeDetailsFromJson(
     difficulty: recipe.difficulty ?? null,
     notes,
     utensils,
+    nutrition: nutritionFromJson(recipe.nutritionGroups),
     servingSize: recipe.servingSize?.quantity?.value ?? 0,
     activeTime: findTime(recipe.times, 'activeTime'),
     totalTime: findTime(recipe.times, 'totalTime'),

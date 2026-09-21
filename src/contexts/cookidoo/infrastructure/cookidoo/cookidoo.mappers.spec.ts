@@ -183,6 +183,91 @@ describe('cookidoo mappers', () => {
       expect(result.totalTime).toBeNull();
       expect(result.servingSize).toBe(0);
     });
+
+    it('maps nutrition values and preserves the basis they refer to', () => {
+      const result = recipeDetailsFromJson(
+        {
+          id: 'r4',
+          title: 'Soup',
+          recipeIngredientGroups: [],
+          nutritionGroups: [
+            {
+              name: '',
+              recipeNutritions: [
+                {
+                  quantity: 1,
+                  unitNotation: 'Portion',
+                  nutritions: [
+                    { type: 'kcal', number: 229, unittype: 'kcal' },
+                    { type: 'fat', number: 14, unittype: 'g' },
+                    { type: 'carb2', number: 19, unittype: 'g' },
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+        localization,
+      );
+
+      expect(result.nutrition).toEqual({
+        basisQuantity: 1,
+        basisUnit: 'Portion',
+        values: [
+          { type: 'kcal', number: 229, unit: 'kcal' },
+          { type: 'fat', number: 14, unit: 'g' },
+          { type: 'carb2', number: 19, unit: 'g' },
+        ],
+      });
+    });
+
+    it('keeps a per-100g basis instead of assuming portions', () => {
+      const result = recipeDetailsFromJson(
+        {
+          id: 'r5',
+          title: 'Spread',
+          recipeIngredientGroups: [],
+          nutritionGroups: [
+            {
+              recipeNutritions: [
+                {
+                  quantity: 100,
+                  unitNotation: 'g',
+                  nutritions: [{ type: 'kcal', number: 560, unittype: 'kcal' }],
+                },
+              ],
+            },
+          ],
+        },
+        localization,
+      );
+
+      expect(result.nutrition?.basisQuantity).toBe(100);
+      expect(result.nutrition?.basisUnit).toBe('g');
+    });
+
+    it('returns null nutrition when the recipe reports none', () => {
+      const result = recipeDetailsFromJson(
+        { id: 'r6', title: 'Unknown', recipeIngredientGroups: [] },
+        localization,
+      );
+
+      expect(result.nutrition).toBeNull();
+    });
+
+    it('returns null nutrition when the groups contain no usable figures', () => {
+      const result = recipeDetailsFromJson(
+        {
+          id: 'r7',
+          title: 'Empty',
+          recipeIngredientGroups: [],
+          nutritionGroups: [{ recipeNutritions: [{ nutritions: [] }] }],
+        },
+        localization,
+      );
+
+      expect(result.nutrition).toBeNull();
+    });
   });
 
   describe('searchResultFromJson', () => {
