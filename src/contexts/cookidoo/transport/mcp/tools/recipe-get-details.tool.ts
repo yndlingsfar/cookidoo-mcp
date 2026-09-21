@@ -15,7 +15,7 @@ export class RecipeGetDetailsMcpTool implements IMcpTool {
   readonly name = 'cookidoo_get_recipe_details';
   readonly title = 'Get Cookidoo recipe details';
   readonly description =
-    'Returns the full details of a single recipe by id: ingredients, utensils, notes, difficulty, serving size, active/total time and image URLs.';
+    'Returns the full details of a single recipe by id: ingredients, preparation steps, nutrition (with the basis the figures refer to, e.g. per portion or per 100 g), utensils, notes, difficulty, serving size, active/total time and image URLs.';
   readonly inputSchema = recipeFindDetailsSchema;
 
   constructor(private readonly queryBus: QueryBus) {}

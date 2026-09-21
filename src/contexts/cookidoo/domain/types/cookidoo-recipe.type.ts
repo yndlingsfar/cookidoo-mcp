@@ -33,6 +33,37 @@ export interface CookidooSearchResult {
   readonly total: number;
 }
 
+/** A single nutrition figure as reported by Cookidoo, with its raw type name. */
+export interface CookidooNutritionValue {
+  readonly type: string;
+  readonly number: number;
+  readonly unit: string;
+}
+
+/**
+ * Nutrition figures for a recipe, together with the basis they refer to.
+ * The basis is preserved verbatim: it may be `1 Portion`, `100 g`, or another
+ * unit, and must never be assumed to be per portion.
+ */
+export interface CookidooNutrition {
+  readonly basisQuantity: number;
+  readonly basisUnit: string;
+  readonly values: CookidooNutritionValue[];
+}
+
+/** One preparation step, with the group it belongs to and its printed number. */
+export interface CookidooRecipeStep {
+  readonly group: string | null;
+  readonly number: string | null;
+  /**
+   * The step instruction as plain text: all HTML markup is stripped and HTML
+   * entities are decoded (`&nbsp;` becomes a plain space), so the text can be
+   * read aloud or printed as is. Machine settings such as
+   * `14 Min./Varoma/Stufe 1` are content and are preserved verbatim.
+   */
+  readonly text: string;
+}
+
 /** Detailed view of a single recipe (core subset of the upstream payload). */
 export interface CookidooRecipeDetails {
   readonly id: string;
@@ -41,6 +72,8 @@ export interface CookidooRecipeDetails {
   readonly difficulty: string | null;
   readonly notes: string[];
   readonly utensils: string[];
+  readonly nutrition: CookidooNutrition | null;
+  readonly steps: CookidooRecipeStep[];
   readonly servingSize: number;
   readonly activeTime: number | null;
   readonly totalTime: number | null;

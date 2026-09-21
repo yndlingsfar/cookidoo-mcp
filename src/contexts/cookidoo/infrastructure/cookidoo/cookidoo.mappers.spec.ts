@@ -183,6 +183,499 @@ describe('cookidoo mappers', () => {
       expect(result.totalTime).toBeNull();
       expect(result.servingSize).toBe(0);
     });
+
+    it('maps nutrition values and preserves the basis they refer to', () => {
+      const result = recipeDetailsFromJson(
+        {
+          id: 'r4',
+          title: 'Soup',
+          recipeIngredientGroups: [],
+          nutritionGroups: [
+            {
+              name: '',
+              recipeNutritions: [
+                {
+                  quantity: 1,
+                  unitNotation: 'Portion',
+                  nutritions: [
+                    { type: 'kcal', number: 229, unittype: 'kcal' },
+                    { type: 'fat', number: 14, unittype: 'g' },
+                    { type: 'carb2', number: 19, unittype: 'g' },
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+        localization,
+      );
+
+      expect(result.nutrition).toEqual({
+        basisQuantity: 1,
+        basisUnit: 'Portion',
+        values: [
+          { type: 'kcal', number: 229, unit: 'kcal' },
+          { type: 'fat', number: 14, unit: 'g' },
+          { type: 'carb2', number: 19, unit: 'g' },
+        ],
+      });
+    });
+
+    it('keeps a per-100g basis instead of assuming portions', () => {
+      const result = recipeDetailsFromJson(
+        {
+          id: 'r5',
+          title: 'Spread',
+          recipeIngredientGroups: [],
+          nutritionGroups: [
+            {
+              recipeNutritions: [
+                {
+                  quantity: 100,
+                  unitNotation: 'g',
+                  nutritions: [{ type: 'kcal', number: 560, unittype: 'kcal' }],
+                },
+              ],
+            },
+          ],
+        },
+        localization,
+      );
+
+      expect(result.nutrition?.basisQuantity).toBe(100);
+      expect(result.nutrition?.basisUnit).toBe('g');
+    });
+
+    it('returns null nutrition when the recipe reports none', () => {
+      const result = recipeDetailsFromJson(
+        { id: 'r6', title: 'Unknown', recipeIngredientGroups: [] },
+        localization,
+      );
+
+      expect(result.nutrition).toBeNull();
+    });
+
+    it('returns null nutrition when the groups contain no usable figures', () => {
+      const result = recipeDetailsFromJson(
+        {
+          id: 'r7',
+          title: 'Empty',
+          recipeIngredientGroups: [],
+          nutritionGroups: [{ recipeNutritions: [{ nutritions: [] }] }],
+        },
+        localization,
+      );
+
+      expect(result.nutrition).toBeNull();
+    });
+
+    it('flattens preparation steps and strips NOBR markup', () => {
+      const result = recipeDetailsFromJson(
+        {
+          id: 'r8',
+          title: 'Soup',
+          recipeIngredientGroups: [],
+          recipeStepGroups: [
+            {
+              title: '',
+              recipeSteps: [
+                {
+                  title: '1',
+                  formattedText:
+                    'Add <NOBR>100 g potatoes</NOBR> and cook <nobr>14 min/Varoma/speed 1</nobr>.',
+                },
+                { title: '2', formattedText: 'Blend for 8 sec/speed 5.' },
+              ],
+            },
+          ],
+        },
+        localization,
+      );
+
+      expect(result.steps).toEqual([
+        {
+          group: null,
+          number: '1',
+          text: 'Add 100 g potatoes and cook 14 min/Varoma/speed 1.',
+        },
+        { group: null, number: '2', text: 'Blend for 8 sec/speed 5.' },
+      ]);
+    });
+
+    it('keeps non-empty group titles on every step of the group', () => {
+      const result = recipeDetailsFromJson(
+        {
+          id: 'r9',
+          title: 'Cake',
+          recipeIngredientGroups: [],
+          recipeStepGroups: [
+            {
+              title: 'Dough',
+              recipeSteps: [{ title: '1', formattedText: 'Mix.' }],
+            },
+            {
+              title: 'Topping',
+              recipeSteps: [{ title: '1', formattedText: 'Whip.' }],
+            },
+          ],
+        },
+        localization,
+      );
+
+      expect(result.steps).toEqual([
+        { group: 'Dough', number: '1', text: 'Mix.' },
+        { group: 'Topping', number: '1', text: 'Whip.' },
+      ]);
+    });
+
+    it('returns an empty step list when the recipe reports none', () => {
+      const result = recipeDetailsFromJson(
+        { id: 'r10', title: 'Unknown', recipeIngredientGroups: [] },
+        localization,
+      );
+
+      expect(result.steps).toEqual([]);
+    });
+
+    it('picks the labelled basis even when an unlabelled one comes first', () => {
+      const result = recipeDetailsFromJson(
+        {
+          id: 'r11',
+          title: 'Jam',
+          recipeIngredientGroups: [],
+          nutritionGroups: [
+            {
+              recipeNutritions: [
+                {
+                  quantity: 16,
+                  unitNotation: null,
+                  nutritions: [
+                    { type: 'kcal', number: 8768, unittype: 'kcal' },
+                  ],
+                },
+                {
+                  quantity: 1,
+                  unitNotation: 'dose',
+                  nutritions: [{ type: 'kcal', number: 548, unittype: 'kcal' }],
+                },
+              ],
+            },
+          ],
+        },
+        localization,
+      );
+
+      expect(result.nutrition).toEqual({
+        basisQuantity: 1,
+        basisUnit: 'dose',
+        values: [{ type: 'kcal', number: 548, unit: 'kcal' }],
+      });
+    });
+
+    it('returns null nutrition when the only basis is unlabelled', () => {
+      for (const unitNotation of ['', '   ', null, undefined]) {
+        const result = recipeDetailsFromJson(
+          {
+            id: 'r12',
+            title: 'Whole recipe only',
+            recipeIngredientGroups: [],
+            nutritionGroups: [
+              {
+                recipeNutritions: [
+                  {
+                    quantity: 16,
+                    unitNotation,
+                    nutritions: [
+                      { type: 'kcal', number: 8768, unittype: 'kcal' },
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+          localization,
+        );
+
+        expect(result.nutrition).toBeNull();
+      }
+    });
+
+    it('rejects non-numeric figures instead of coercing them to 0 or 1', () => {
+      const result = recipeDetailsFromJson(
+        {
+          id: 'r13',
+          title: 'Broken figures',
+          recipeIngredientGroups: [],
+          nutritionGroups: [
+            {
+              recipeNutritions: [
+                {
+                  quantity: 1,
+                  unitNotation: 'Portion',
+                  nutritions: [
+                    { type: 'kcal', number: '', unittype: 'kcal' },
+                    { type: 'fat', number: true, unittype: 'g' },
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+        localization,
+      );
+
+      expect(result.nutrition).toBeNull();
+    });
+
+    it('treats an entry with a nested quantity object as unusable', () => {
+      const result = recipeDetailsFromJson(
+        {
+          id: 'r14',
+          title: 'Nested quantity',
+          recipeIngredientGroups: [],
+          nutritionGroups: [
+            {
+              recipeNutritions: [
+                {
+                  quantity: { value: 1 },
+                  unitNotation: 'Portion',
+                  nutritions: [{ type: 'kcal', number: 229, unittype: 'kcal' }],
+                },
+              ],
+            },
+          ],
+        },
+        localization,
+      );
+
+      expect(result.nutrition).toBeNull();
+    });
+
+    it('defaults the basis quantity to 1 when the entry reports none', () => {
+      const result = recipeDetailsFromJson(
+        {
+          id: 'r15',
+          title: 'No quantity',
+          recipeIngredientGroups: [],
+          nutritionGroups: [
+            {
+              recipeNutritions: [
+                {
+                  unitNotation: 'Portion',
+                  nutritions: [{ type: 'kcal', number: 229, unittype: 'kcal' }],
+                },
+              ],
+            },
+          ],
+        },
+        localization,
+      );
+
+      expect(result.nutrition).toEqual({
+        basisQuantity: 1,
+        basisUnit: 'Portion',
+        values: [{ type: 'kcal', number: 229, unit: 'kcal' }],
+      });
+    });
+
+    it('keeps the valid figures of an entry and drops the unusable ones', () => {
+      const result = recipeDetailsFromJson(
+        {
+          id: 'r16',
+          title: 'Mixed',
+          recipeIngredientGroups: [],
+          nutritionGroups: [
+            {
+              recipeNutritions: [
+                {
+                  quantity: 1,
+                  unitNotation: 'Portion',
+                  nutritions: [
+                    { type: 'kcal', number: 229, unittype: 'kcal' },
+                    { type: 'fat', number: '' },
+                    { type: 'protein', number: null, unittype: 'g' },
+                    { number: 19, unittype: 'g' },
+                    { type: 'carb2', number: 19 },
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+        localization,
+      );
+
+      expect(result.nutrition).toEqual({
+        basisQuantity: 1,
+        basisUnit: 'Portion',
+        values: [
+          { type: 'kcal', number: 229, unit: 'kcal' },
+          { type: 'carb2', number: 19, unit: '' },
+        ],
+      });
+    });
+
+    it('returns null nutrition when nutritionGroups is not an array', () => {
+      const result = recipeDetailsFromJson(
+        {
+          id: 'r17',
+          title: 'Odd payload',
+          recipeIngredientGroups: [],
+          nutritionGroups: { recipeNutritions: [] },
+        },
+        localization,
+      );
+
+      expect(result.nutrition).toBeNull();
+    });
+
+    it('skips groups whose recipeNutritions is not an array', () => {
+      const result = recipeDetailsFromJson(
+        {
+          id: 'r18',
+          title: 'Odd group',
+          recipeIngredientGroups: [],
+          nutritionGroups: [
+            { recipeNutritions: 'none' },
+            {
+              recipeNutritions: [
+                {
+                  quantity: 100,
+                  unitNotation: 'g',
+                  nutritions: [{ type: 'kcal', number: 560, unittype: 'kcal' }],
+                },
+              ],
+            },
+          ],
+        },
+        localization,
+      );
+
+      expect(result.nutrition?.basisUnit).toBe('g');
+    });
+
+    it('strips all markup and decodes entities in step texts', () => {
+      const result = recipeDetailsFromJson(
+        {
+          id: 'r19',
+          title: 'Soup',
+          recipeIngredientGroups: [],
+          recipeStepGroups: [
+            {
+              title: '  Teig  ',
+              recipeSteps: [
+                {
+                  title: ' 1 ',
+                  formattedText:
+                    '<p>Sahne, Cr&egrave;me fra&icirc;che und Pfeffer zugeben und <strong>30&nbsp;Sek./Stufe 5-9 schrittweise ansteigend</strong> p&uuml;rieren.</p>',
+                },
+                {
+                  title: '2',
+                  formattedText:
+                    'Pr&eacute;-aque&ccedil;a o forno a 180&deg;C &amp; <i>warte</i> <nobr>14 Min./Varoma/Stufe 1</nobr>.',
+                },
+                {
+                  title: '3',
+                  formattedText:
+                    '<p>Deckel aufsetzen</p><p>Messbecher einsetzen</p>',
+                },
+              ],
+            },
+          ],
+        },
+        localization,
+      );
+
+      expect(result.steps).toEqual([
+        {
+          group: 'Teig',
+          number: '1',
+          text: 'Sahne, Crème fraîche und Pfeffer zugeben und 30 Sek./Stufe 5-9 schrittweise ansteigend pürieren.',
+        },
+        {
+          group: 'Teig',
+          number: '2',
+          text: 'Pré-aqueça o forno a 180°C & warte 14 Min./Varoma/Stufe 1.',
+        },
+        {
+          group: 'Teig',
+          number: '3',
+          text: 'Deckel aufsetzen Messbecher einsetzen',
+        },
+      ]);
+    });
+
+    it('decodes numeric entities and does not double-decode &amp;', () => {
+      const result = recipeDetailsFromJson(
+        {
+          id: 'r20',
+          title: 'Entities',
+          recipeIngredientGroups: [],
+          recipeStepGroups: [
+            {
+              recipeSteps: [
+                {
+                  title: '1',
+                  formattedText:
+                    'Omas &#39;Rezept&#39; bei 180&#176;C &#x2013; &quot;fertig&quot; &amp;lt;nobr&amp;gt;',
+                },
+                {
+                  title: '2',
+                  formattedText:
+                    'Forma (&Oslash; 28 cm), p&atilde;o, &frac12; Zitrone, &unknownentity;',
+                },
+              ],
+            },
+          ],
+        },
+        localization,
+      );
+
+      expect(result.steps[0].text).toBe(
+        'Omas \'Rezept\' bei 180°C – "fertig" &lt;nobr&gt;',
+      );
+      expect(result.steps[1].text).toBe(
+        'Forma (Ø 28 cm), pão, ½ Zitrone, &unknownentity;',
+      );
+    });
+
+    it('skips steps without a formattedText', () => {
+      const result = recipeDetailsFromJson(
+        {
+          id: 'r21',
+          title: 'Partial',
+          recipeIngredientGroups: [],
+          recipeStepGroups: [
+            {
+              recipeSteps: [
+                { title: '1' },
+                { title: '2', formattedText: null },
+                { title: '3', formattedText: 'Mix.' },
+              ],
+            },
+          ],
+        },
+        localization,
+      );
+
+      expect(result.steps).toEqual([
+        { group: null, number: '3', text: 'Mix.' },
+      ]);
+    });
+
+    it('returns an empty step list when recipeStepGroups is not an array', () => {
+      const result = recipeDetailsFromJson(
+        {
+          id: 'r22',
+          title: 'Odd payload',
+          recipeIngredientGroups: [],
+          recipeStepGroups: { recipeSteps: [] },
+        },
+        localization,
+      );
+
+      expect(result.steps).toEqual([]);
+    });
   });
 
   describe('searchResultFromJson', () => {
