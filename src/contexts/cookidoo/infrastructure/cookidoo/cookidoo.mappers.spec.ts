@@ -268,6 +268,74 @@ describe('cookidoo mappers', () => {
 
       expect(result.nutrition).toBeNull();
     });
+
+    it('flattens preparation steps and strips NOBR markup', () => {
+      const result = recipeDetailsFromJson(
+        {
+          id: 'r8',
+          title: 'Soup',
+          recipeIngredientGroups: [],
+          recipeStepGroups: [
+            {
+              title: '',
+              recipeSteps: [
+                {
+                  title: '1',
+                  formattedText:
+                    'Add <NOBR>100 g potatoes</NOBR> and cook <nobr>14 min/Varoma/speed 1</nobr>.',
+                },
+                { title: '2', formattedText: 'Blend for 8 sec/speed 5.' },
+              ],
+            },
+          ],
+        },
+        localization,
+      );
+
+      expect(result.steps).toEqual([
+        {
+          group: null,
+          number: '1',
+          text: 'Add 100 g potatoes and cook 14 min/Varoma/speed 1.',
+        },
+        { group: null, number: '2', text: 'Blend for 8 sec/speed 5.' },
+      ]);
+    });
+
+    it('keeps non-empty group titles on every step of the group', () => {
+      const result = recipeDetailsFromJson(
+        {
+          id: 'r9',
+          title: 'Cake',
+          recipeIngredientGroups: [],
+          recipeStepGroups: [
+            {
+              title: 'Dough',
+              recipeSteps: [{ title: '1', formattedText: 'Mix.' }],
+            },
+            {
+              title: 'Topping',
+              recipeSteps: [{ title: '1', formattedText: 'Whip.' }],
+            },
+          ],
+        },
+        localization,
+      );
+
+      expect(result.steps).toEqual([
+        { group: 'Dough', number: '1', text: 'Mix.' },
+        { group: 'Topping', number: '1', text: 'Whip.' },
+      ]);
+    });
+
+    it('returns an empty step list when the recipe reports none', () => {
+      const result = recipeDetailsFromJson(
+        { id: 'r10', title: 'Unknown', recipeIngredientGroups: [] },
+        localization,
+      );
+
+      expect(result.steps).toEqual([]);
+    });
   });
 
   describe('searchResultFromJson', () => {

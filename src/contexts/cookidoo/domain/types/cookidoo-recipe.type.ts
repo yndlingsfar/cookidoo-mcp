@@ -51,6 +51,13 @@ export interface CookidooNutrition {
   readonly values: CookidooNutritionValue[];
 }
 
+/** One preparation step, with the group it belongs to and its printed number. */
+export interface CookidooRecipeStep {
+  readonly group: string | null;
+  readonly number: string | null;
+  readonly text: string;
+}
+
 /** Detailed view of a single recipe (core subset of the upstream payload). */
 export interface CookidooRecipeDetails {
   readonly id: string;
@@ -60,6 +67,7 @@ export interface CookidooRecipeDetails {
   readonly notes: string[];
   readonly utensils: string[];
   readonly nutrition: CookidooNutrition | null;
+  readonly steps: CookidooRecipeStep[];
   readonly servingSize: number;
   readonly activeTime: number | null;
   readonly totalTime: number | null;

@@ -8,6 +8,7 @@ import {
   CookidooNutrition,
   CookidooNutritionValue,
   CookidooRecipeDetails,
+  CookidooRecipeStep,
   CookidooSearchRecipeHit,
   CookidooSearchResult,
   CookidooShoppingRecipe,
@@ -216,6 +217,37 @@ function nutritionFromJson(groups: unknown): CookidooNutrition | null {
   return null;
 }
 
+/**
+ * Flatten the preparation steps of a recipe.
+ *
+ * `<NOBR>` wrappers are markup that Cookidoo uses to keep quantities and
+ * machine settings on one line; the text inside them is content and is kept.
+ */
+function stepsFromJson(groups: unknown): CookidooRecipeStep[] {
+  if (!Array.isArray(groups)) {
+    return [];
+  }
+  return (groups as Json[]).flatMap((group) => {
+    const steps: Json[] = Array.isArray(group?.recipeSteps)
+      ? group.recipeSteps
+      : [];
+    const groupTitle =
+      typeof group?.title === 'string' && group.title.trim() !== ''
+        ? group.title
+        : null;
+    return steps
+      .filter((step) => typeof step?.formattedText === 'string')
+      .map((step) => ({
+        group: groupTitle,
+        number:
+          typeof step.title === 'string' && step.title.trim() !== ''
+            ? step.title
+            : null,
+        text: step.formattedText.replace(/<\/?nobr>/gi, ''),
+      }));
+  });
+}
+
 export function recipeDetailsFromJson(
   recipe: Json,
   localization: CookidooLocalization,
@@ -242,6 +274,7 @@ export function recipeDetailsFromJson(
     notes,
     utensils,
     nutrition: nutritionFromJson(recipe.nutritionGroups),
+    steps: stepsFromJson(recipe.recipeStepGroups),
     servingSize: recipe.servingSize?.quantity?.value ?? 0,
     activeTime: findTime(recipe.times, 'activeTime'),
     totalTime: findTime(recipe.times, 'totalTime'),
