@@ -170,48 +170,89 @@ function findTime(times: Json[] | undefined, type: string): number | null {
 }
 
 /**
+ * Is this a real, finite number?
+ *
+ * Deliberately not `Number(x)`: coercion turns `''` into 0 and `true` into 1,
+ * which would report a fabricated figure as if it had been measured.
+ */
+function isFiniteNumber(value: unknown): value is number {
+  return typeof value === 'number' && Number.isFinite(value);
+}
+
+/** Map the individual figures of one nutrition entry, dropping unusable ones. */
+function nutritionValuesFromJson(raw: unknown): CookidooNutritionValue[] {
+  if (!Array.isArray(raw)) {
+    return [];
+  }
+  return (raw as Json[])
+    .filter(
+      (value) =>
+        typeof value?.type === 'string' && isFiniteNumber(value.number),
+    )
+    .map((value) => ({
+      type: value.type,
+      number: value.number,
+      unit: typeof value.unittype === 'string' ? value.unittype : '',
+    }));
+}
+
+/**
+ * Map one `recipeNutritions` entry, or null when it is not usable.
+ *
+ * An entry is usable only when it states the basis its figures refer to and
+ * carries at least one real figure. An unlabelled basis ("we do not know what
+ * these numbers are per") is treated exactly like missing figures: absent.
+ * A present but non-numeric `quantity` also makes the entry unusable — the API
+ * writes nested `{ value: n }` quantities elsewhere, and defaulting to 1 here
+ * would assert "per one unit" without evidence. Only an absent `quantity`
+ * defaults to 1.
+ */
+function nutritionEntryFromJson(entry: Json): CookidooNutrition | null {
+  const basisUnit =
+    typeof entry?.unitNotation === 'string' ? entry.unitNotation.trim() : '';
+  if (basisUnit === '') {
+    return null;
+  }
+
+  const rawQuantity: unknown = entry?.quantity;
+  const missingQuantity = rawQuantity === undefined || rawQuantity === null;
+  if (!missingQuantity && !isFiniteNumber(rawQuantity)) {
+    return null;
+  }
+  const basisQuantity = missingQuantity ? 1 : rawQuantity;
+
+  const values = nutritionValuesFromJson(entry?.nutritions);
+  if (values.length === 0) {
+    return null;
+  }
+  return { basisQuantity, basisUnit, values };
+}
+
+/**
  * Read the nutrition figures from a recipe payload.
  *
  * Cookidoo reports figures against a basis (`1 Portion`, `100 g`, …) that is
  * carried through unchanged: assuming portions here would silently scale every
- * downstream calculation. Returns null when no usable figures are present,
- * which is not the same as zero.
+ * downstream calculation. A recipe may report several bases at once (per
+ * portion *and* per whole recipe, a 16x difference) in an order the API does
+ * not guarantee, so the labelled entry is selected explicitly and never by
+ * position. Returns null when no usable figures are present, which is not the
+ * same as zero.
  */
 function nutritionFromJson(groups: unknown): CookidooNutrition | null {
   if (!Array.isArray(groups)) {
     return null;
   }
   for (const group of groups as Json[]) {
-    const entries: Json[] = group?.recipeNutritions ?? [];
+    const entries: unknown = group?.recipeNutritions;
     if (!Array.isArray(entries)) {
       continue;
     }
-    for (const entry of entries) {
-      const raw: Json[] = Array.isArray(entry?.nutritions)
-        ? entry.nutritions
-        : [];
-      const values: CookidooNutritionValue[] = raw
-        .filter(
-          (value) =>
-            typeof value?.type === 'string' &&
-            value?.number !== undefined &&
-            value?.number !== null &&
-            !Number.isNaN(Number(value.number)),
-        )
-        .map((value) => ({
-          type: value.type,
-          number: Number(value.number),
-          unit: typeof value.unittype === 'string' ? value.unittype : '',
-        }));
-      if (values.length === 0) {
-        continue;
+    for (const entry of entries as Json[]) {
+      const nutrition = nutritionEntryFromJson(entry);
+      if (nutrition !== null) {
+        return nutrition;
       }
-      return {
-        basisQuantity: Number(entry?.quantity ?? 1),
-        basisUnit:
-          typeof entry?.unitNotation === 'string' ? entry.unitNotation : '',
-        values,
-      };
     }
   }
   return null;

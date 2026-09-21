@@ -336,6 +336,223 @@ describe('cookidoo mappers', () => {
 
       expect(result.steps).toEqual([]);
     });
+
+    it('picks the labelled basis even when an unlabelled one comes first', () => {
+      const result = recipeDetailsFromJson(
+        {
+          id: 'r11',
+          title: 'Jam',
+          recipeIngredientGroups: [],
+          nutritionGroups: [
+            {
+              recipeNutritions: [
+                {
+                  quantity: 16,
+                  unitNotation: null,
+                  nutritions: [
+                    { type: 'kcal', number: 8768, unittype: 'kcal' },
+                  ],
+                },
+                {
+                  quantity: 1,
+                  unitNotation: 'dose',
+                  nutritions: [{ type: 'kcal', number: 548, unittype: 'kcal' }],
+                },
+              ],
+            },
+          ],
+        },
+        localization,
+      );
+
+      expect(result.nutrition).toEqual({
+        basisQuantity: 1,
+        basisUnit: 'dose',
+        values: [{ type: 'kcal', number: 548, unit: 'kcal' }],
+      });
+    });
+
+    it('returns null nutrition when the only basis is unlabelled', () => {
+      for (const unitNotation of ['', '   ', null, undefined]) {
+        const result = recipeDetailsFromJson(
+          {
+            id: 'r12',
+            title: 'Whole recipe only',
+            recipeIngredientGroups: [],
+            nutritionGroups: [
+              {
+                recipeNutritions: [
+                  {
+                    quantity: 16,
+                    unitNotation,
+                    nutritions: [
+                      { type: 'kcal', number: 8768, unittype: 'kcal' },
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+          localization,
+        );
+
+        expect(result.nutrition).toBeNull();
+      }
+    });
+
+    it('rejects non-numeric figures instead of coercing them to 0 or 1', () => {
+      const result = recipeDetailsFromJson(
+        {
+          id: 'r13',
+          title: 'Broken figures',
+          recipeIngredientGroups: [],
+          nutritionGroups: [
+            {
+              recipeNutritions: [
+                {
+                  quantity: 1,
+                  unitNotation: 'Portion',
+                  nutritions: [
+                    { type: 'kcal', number: '', unittype: 'kcal' },
+                    { type: 'fat', number: true, unittype: 'g' },
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+        localization,
+      );
+
+      expect(result.nutrition).toBeNull();
+    });
+
+    it('treats an entry with a nested quantity object as unusable', () => {
+      const result = recipeDetailsFromJson(
+        {
+          id: 'r14',
+          title: 'Nested quantity',
+          recipeIngredientGroups: [],
+          nutritionGroups: [
+            {
+              recipeNutritions: [
+                {
+                  quantity: { value: 1 },
+                  unitNotation: 'Portion',
+                  nutritions: [{ type: 'kcal', number: 229, unittype: 'kcal' }],
+                },
+              ],
+            },
+          ],
+        },
+        localization,
+      );
+
+      expect(result.nutrition).toBeNull();
+    });
+
+    it('defaults the basis quantity to 1 when the entry reports none', () => {
+      const result = recipeDetailsFromJson(
+        {
+          id: 'r15',
+          title: 'No quantity',
+          recipeIngredientGroups: [],
+          nutritionGroups: [
+            {
+              recipeNutritions: [
+                {
+                  unitNotation: 'Portion',
+                  nutritions: [{ type: 'kcal', number: 229, unittype: 'kcal' }],
+                },
+              ],
+            },
+          ],
+        },
+        localization,
+      );
+
+      expect(result.nutrition).toEqual({
+        basisQuantity: 1,
+        basisUnit: 'Portion',
+        values: [{ type: 'kcal', number: 229, unit: 'kcal' }],
+      });
+    });
+
+    it('keeps the valid figures of an entry and drops the unusable ones', () => {
+      const result = recipeDetailsFromJson(
+        {
+          id: 'r16',
+          title: 'Mixed',
+          recipeIngredientGroups: [],
+          nutritionGroups: [
+            {
+              recipeNutritions: [
+                {
+                  quantity: 1,
+                  unitNotation: 'Portion',
+                  nutritions: [
+                    { type: 'kcal', number: 229, unittype: 'kcal' },
+                    { type: 'fat', number: '' },
+                    { type: 'protein', number: null, unittype: 'g' },
+                    { number: 19, unittype: 'g' },
+                    { type: 'carb2', number: 19 },
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+        localization,
+      );
+
+      expect(result.nutrition).toEqual({
+        basisQuantity: 1,
+        basisUnit: 'Portion',
+        values: [
+          { type: 'kcal', number: 229, unit: 'kcal' },
+          { type: 'carb2', number: 19, unit: '' },
+        ],
+      });
+    });
+
+    it('returns null nutrition when nutritionGroups is not an array', () => {
+      const result = recipeDetailsFromJson(
+        {
+          id: 'r17',
+          title: 'Odd payload',
+          recipeIngredientGroups: [],
+          nutritionGroups: { recipeNutritions: [] },
+        },
+        localization,
+      );
+
+      expect(result.nutrition).toBeNull();
+    });
+
+    it('skips groups whose recipeNutritions is not an array', () => {
+      const result = recipeDetailsFromJson(
+        {
+          id: 'r18',
+          title: 'Odd group',
+          recipeIngredientGroups: [],
+          nutritionGroups: [
+            { recipeNutritions: 'none' },
+            {
+              recipeNutritions: [
+                {
+                  quantity: 100,
+                  unitNotation: 'g',
+                  nutritions: [{ type: 'kcal', number: 560, unittype: 'kcal' }],
+                },
+              ],
+            },
+          ],
+        },
+        localization,
+      );
+
+      expect(result.nutrition?.basisUnit).toBe('g');
+    });
   });
 
   describe('searchResultFromJson', () => {
