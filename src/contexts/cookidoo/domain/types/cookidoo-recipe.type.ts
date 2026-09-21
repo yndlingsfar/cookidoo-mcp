@@ -55,6 +55,12 @@ export interface CookidooNutrition {
 export interface CookidooRecipeStep {
   readonly group: string | null;
   readonly number: string | null;
+  /**
+   * The step instruction as plain text: all HTML markup is stripped and HTML
+   * entities are decoded (`&nbsp;` becomes a plain space), so the text can be
+   * read aloud or printed as is. Machine settings such as
+   * `14 Min./Varoma/Stufe 1` are content and are preserved verbatim.
+   */
   readonly text: string;
 }
 

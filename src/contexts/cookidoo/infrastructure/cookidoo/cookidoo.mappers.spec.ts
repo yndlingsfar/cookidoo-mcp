@@ -553,6 +553,129 @@ describe('cookidoo mappers', () => {
 
       expect(result.nutrition?.basisUnit).toBe('g');
     });
+
+    it('strips all markup and decodes entities in step texts', () => {
+      const result = recipeDetailsFromJson(
+        {
+          id: 'r19',
+          title: 'Soup',
+          recipeIngredientGroups: [],
+          recipeStepGroups: [
+            {
+              title: '  Teig  ',
+              recipeSteps: [
+                {
+                  title: ' 1 ',
+                  formattedText:
+                    '<p>Sahne, Cr&egrave;me fra&icirc;che und Pfeffer zugeben und <strong>30&nbsp;Sek./Stufe 5-9 schrittweise ansteigend</strong> p&uuml;rieren.</p>',
+                },
+                {
+                  title: '2',
+                  formattedText:
+                    'Pr&eacute;-aque&ccedil;a o forno a 180&deg;C &amp; <i>warte</i> <nobr>14 Min./Varoma/Stufe 1</nobr>.',
+                },
+                {
+                  title: '3',
+                  formattedText:
+                    '<p>Deckel aufsetzen</p><p>Messbecher einsetzen</p>',
+                },
+              ],
+            },
+          ],
+        },
+        localization,
+      );
+
+      expect(result.steps).toEqual([
+        {
+          group: 'Teig',
+          number: '1',
+          text: 'Sahne, Crème fraîche und Pfeffer zugeben und 30 Sek./Stufe 5-9 schrittweise ansteigend pürieren.',
+        },
+        {
+          group: 'Teig',
+          number: '2',
+          text: 'Pré-aqueça o forno a 180°C & warte 14 Min./Varoma/Stufe 1.',
+        },
+        {
+          group: 'Teig',
+          number: '3',
+          text: 'Deckel aufsetzen Messbecher einsetzen',
+        },
+      ]);
+    });
+
+    it('decodes numeric entities and does not double-decode &amp;', () => {
+      const result = recipeDetailsFromJson(
+        {
+          id: 'r20',
+          title: 'Entities',
+          recipeIngredientGroups: [],
+          recipeStepGroups: [
+            {
+              recipeSteps: [
+                {
+                  title: '1',
+                  formattedText:
+                    'Omas &#39;Rezept&#39; bei 180&#176;C &#x2013; &quot;fertig&quot; &amp;lt;nobr&amp;gt;',
+                },
+                {
+                  title: '2',
+                  formattedText:
+                    'Forma (&Oslash; 28 cm), p&atilde;o, &frac12; Zitrone, &unknownentity;',
+                },
+              ],
+            },
+          ],
+        },
+        localization,
+      );
+
+      expect(result.steps[0].text).toBe(
+        'Omas \'Rezept\' bei 180°C – "fertig" &lt;nobr&gt;',
+      );
+      expect(result.steps[1].text).toBe(
+        'Forma (Ø 28 cm), pão, ½ Zitrone, &unknownentity;',
+      );
+    });
+
+    it('skips steps without a formattedText', () => {
+      const result = recipeDetailsFromJson(
+        {
+          id: 'r21',
+          title: 'Partial',
+          recipeIngredientGroups: [],
+          recipeStepGroups: [
+            {
+              recipeSteps: [
+                { title: '1' },
+                { title: '2', formattedText: null },
+                { title: '3', formattedText: 'Mix.' },
+              ],
+            },
+          ],
+        },
+        localization,
+      );
+
+      expect(result.steps).toEqual([
+        { group: null, number: '3', text: 'Mix.' },
+      ]);
+    });
+
+    it('returns an empty step list when recipeStepGroups is not an array', () => {
+      const result = recipeDetailsFromJson(
+        {
+          id: 'r22',
+          title: 'Odd payload',
+          recipeIngredientGroups: [],
+          recipeStepGroups: { recipeSteps: [] },
+        },
+        localization,
+      );
+
+      expect(result.steps).toEqual([]);
+    });
   });
 
   describe('searchResultFromJson', () => {

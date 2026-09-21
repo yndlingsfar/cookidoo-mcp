@@ -16,8 +16,18 @@ const localization: CookidooLocalization = {
   url: 'https://cookidoo.de/foundation/de-DE',
 };
 
+/** Any surviving HTML tag or entity — not just the ones we already know about. */
+const MARKUP = /<[^>]+>|&[a-zA-Z#0-9]+;/;
+
 async function main(): Promise<void> {
   const id = process.argv[2] ?? 'r16687';
+  if (!/^r\d+$/.test(id)) {
+    console.error(
+      `Invalid recipe id "${id}". Expected the form r12345.\n` +
+        'Usage: pnpm verify:recipe [recipeId]',
+    );
+    process.exit(1);
+  }
   const url = `https://cookidoo.de/recipes/recipe/de-DE/${id}`;
 
   const response = await fetch(url, {
@@ -41,10 +51,13 @@ async function main(): Promise<void> {
   );
   console.log(`steps:      ${details.steps.length}`);
   if (details.steps.length > 0) {
-    console.log(`first step: ${details.steps[0].text.slice(0, 80)}…`);
+    console.log(`first step: ${details.steps[0].text}`);
   }
-  if (details.steps.some((step) => /<\/?nobr>/i.test(step.text))) {
-    throw new Error('NOBR markup survived in at least one step');
+  const withMarkup = details.steps.filter((step) => MARKUP.test(step.text));
+  if (withMarkup.length > 0) {
+    throw new Error(
+      `HTML markup survived in ${withMarkup.length} of ${details.steps.length} steps, e.g.: ${withMarkup[0].text}`,
+    );
   }
 }
 
