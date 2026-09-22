@@ -13,6 +13,17 @@ services:
     restart: unless-stopped
     networks:
       - proxy
+    # Von außen kommt der Traffic durch den Cloudflare-Tunnel. Im LAN schreibt
+    # der Resolver *.ohana-five.dev aber auf diesen Host um, und dort antwortet
+    # Traefik — ohne Router also 404, u.a. auf der OAuth-Seite /authorize, die
+    # der Browser öffnen muss. Derselbe Hostname, damit MCP_PUBLIC_URL passt.
+    labels:
+      traefik.enable: "true"
+      traefik.docker.network: "proxy"
+      traefik.http.routers.cookidoo-mcp.entrypoints: "https"
+      traefik.http.routers.cookidoo-mcp.rule: "Host(`cookidoo.ohana-five.dev`)"
+      traefik.http.routers.cookidoo-mcp.tls: "true"
+      traefik.http.services.cookidoo-mcp.loadbalancer.server.port: "3000"
     healthcheck:
       test:
         - CMD
